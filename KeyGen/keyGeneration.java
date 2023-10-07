@@ -6,15 +6,15 @@ import java.security.*;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.RSAPrivateKeySpec;
 import java.security.spec.RSAPublicKeySpec;
+import java.util.Scanner;
 
 
 public class keyGeneration {
     //need to generate 2 pairs of RSA public and private keys for X and Y
-    public keyGeneration() throws Exception {
+    public static void Generate() throws Exception {
 
         int BLOCK_SIZE = 16*1024;
         Cipher cipher = Cipher.getInstance("RSA/ECB/PKCS1Padding");
-
 
         //Generate a pair of keys
         SecureRandom random = new SecureRandom();
@@ -37,10 +37,10 @@ public class keyGeneration {
         RSAPrivateKeySpec KyPrivSpec = factory.getKeySpec(KyPrivate, RSAPrivateKeySpec.class);
 
         //save the parameters of the keys to the files
-        RSAConfidentiality.saveToFile("XPublic.key", KxPubSpec.getModulus(), KxPubSpec.getPublicExponent());
-        RSAConfidentiality.saveToFile("XPrivate.key", KxPrivSpec.getModulus(), KxPrivSpec.getPrivateExponent());
-        RSAConfidentiality.saveToFile("YPublic.key", KyPubSpec.getModulus(), KyPubSpec.getPublicExponent());
-        RSAConfidentiality.saveToFile("YPrivate.key", KyPrivSpec.getModulus(), KyPrivSpec.getPrivateExponent());
+        saveToFile("XPublic.key", KxPubSpec.getModulus(), KxPubSpec.getPublicExponent());
+        saveToFile("XPrivate.key", KxPrivSpec.getModulus(), KxPrivSpec.getPrivateExponent());
+        saveToFile("YPublic.key", KyPubSpec.getModulus(), KyPubSpec.getPublicExponent());
+        saveToFile("YPrivate.key", KyPrivSpec.getModulus(), KyPrivSpec.getPrivateExponent());
 
 
         PublicKey pubXKey2 = readPubKeyFromFile("XPublic.key");
@@ -77,6 +77,7 @@ public class keyGeneration {
             oout.close();
         }
     }
+
     //read key parameters from a file and generate the public key
     public static PublicKey readPubKeyFromFile(String keyFileName)
             throws IOException {
@@ -121,4 +122,24 @@ public class keyGeneration {
             oin.close();
         }
     }
+
+    public static void main(String[] args){
+        Scanner sc = new Scanner(System.in);
+        System.out.println(" Enter a 16 Character Symmetric Key: ");
+        String key = sc.nextLine();
+        if(key.length() != 16)
+        {
+            System.out.println("Invalid Key Length");
+        }
+        else{
+            try{
+                Generate();
+            }
+            catch(Exception e){
+                System.out.println("Error Generating Keys:");
+                System.out.println(e);
+            }
+        }
+    }
+   
 }
