@@ -1,3 +1,5 @@
+package KeyGen;
+
 import javax.crypto.Cipher;
 import javax.crypto.NoSuchPaddingException;
 import java.io.*;
@@ -13,7 +15,8 @@ public class keyGeneration {
     //need to generate 2 pairs of RSA public and private keys for X and Y
     public static void Generate() throws Exception {
 
-        int BLOCK_SIZE = 16*1024;
+        int BLOCK_SIZE = 16*1024; // 16KB - AES block size
+        
         Cipher cipher = Cipher.getInstance("RSA/ECB/PKCS1Padding");
 
         //Generate a pair of keys
@@ -42,13 +45,13 @@ public class keyGeneration {
         saveToFile("YPublic.key", KyPubSpec.getModulus(), KyPubSpec.getPublicExponent());
         saveToFile("YPrivate.key", KyPrivSpec.getModulus(), KyPrivSpec.getPrivateExponent());
 
-
+        // read keys from files
         PublicKey pubXKey2 = readPubKeyFromFile("XPublic.key");
         PrivateKey privXKey2 = readPrivKeyFromFile("XPrivate.key");
         PublicKey pubYKey2 = readPubKeyFromFile("YPublic.key");
         PrivateKey privYKey2 = readPrivKeyFromFile("YPrivate.key");
 
-        //encrypt & decrypt using the keys from the files
+        //encrypt & decrypt using the keys from the files (is this a test?)
         byte[] input2 = "Hello World! (using the keys from files)".getBytes();
         cipher.init(Cipher.ENCRYPT_MODE, pubXKey2, random);
         byte[] cipherText2 = cipher.doFinal(input2);
@@ -60,7 +63,7 @@ public class keyGeneration {
                 j=-1;
             }
         }
-
+     
 
     }
     public static void saveToFile(String fileName, BigInteger mod, BigInteger exp) throws IOException {
@@ -82,7 +85,8 @@ public class keyGeneration {
     public static PublicKey readPubKeyFromFile(String keyFileName)
             throws IOException {
         InputStream in =
-                RSAConfidentiality.class.getResourceAsStream(keyFileName);
+                new FileInputStream(keyFileName);
+
         ObjectInputStream oin =
                 new ObjectInputStream(new BufferedInputStream(in));
         try {
@@ -104,7 +108,7 @@ public class keyGeneration {
     public static PrivateKey readPrivKeyFromFile(String keyFileName)
             throws IOException {
         InputStream in =
-                RSAConfidentiality.class.getResourceAsStream(keyFileName);
+                new FileInputStream(keyFileName);
         ObjectInputStream oin =
                 new ObjectInputStream(new BufferedInputStream(in));
         try {
@@ -140,6 +144,8 @@ public class keyGeneration {
                 System.out.println(e);
             }
         }
+        sc.close();
+        
     }
    
 }
