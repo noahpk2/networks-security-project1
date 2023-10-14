@@ -1,7 +1,10 @@
 package KeyGen;
 
 import javax.crypto.Cipher;
+import javax.crypto.KeyGenerator;
 import javax.crypto.NoSuchPaddingException;
+import javax.crypto.SecretKey;
+
 import java.io.*;
 import java.math.BigInteger;
 import java.security.*;
@@ -15,11 +18,9 @@ public class keyGeneration {
     //need to generate 2 pairs of RSA public and private keys for X and Y
     public static void Generate() throws Exception {
 
-        int BLOCK_SIZE = 16*1024; // 16KB - AES block size
+        //int BLOCK_SIZE = 16*1024; // 16KB - AES block size - didn't end up using this here
         
-        Cipher cipher = Cipher.getInstance("RSA/ECB/PKCS1Padding");
-
-        //Generate a pair of keys
+        //Generate key pairs for X and Y - even though we're only using x for this particular encryption.
         SecureRandom random = new SecureRandom();
         KeyPairGenerator generator = null;
         generator = KeyPairGenerator.getInstance("RSA");
@@ -31,6 +32,7 @@ public class keyGeneration {
         Key KyPublic = pair2.getPublic();
         Key KyPrivate = pair2.getPrivate();
 
+        
         //get the parameters of the keys: modulus and exponent
         KeyFactory factory = KeyFactory.getInstance("RSA");
 
@@ -45,13 +47,15 @@ public class keyGeneration {
         saveToFile("YPublic.key", KyPubSpec.getModulus(), KyPubSpec.getPublicExponent());
         saveToFile("YPrivate.key", KyPrivSpec.getModulus(), KyPrivSpec.getPrivateExponent());
 
-        // read keys from files
+
+
+        /* // read keys from files - not needed for this class
         PublicKey pubXKey2 = readPubKeyFromFile("XPublic.key");
         PrivateKey privXKey2 = readPrivKeyFromFile("XPrivate.key");
         PublicKey pubYKey2 = readPubKeyFromFile("YPublic.key");
-        PrivateKey privYKey2 = readPrivKeyFromFile("YPrivate.key");
+        PrivateKey privYKey2 = readPrivKeyFromFile("YPrivate.key"); */
 
-        //encrypt & decrypt using the keys from the files (is this a test?)
+        /* //encrypt & decrypt using the keys from the files (is this a test?)
         byte[] input2 = "Hello World! (using the keys from files)".getBytes();
         cipher.init(Cipher.ENCRYPT_MODE, pubXKey2, random);
         byte[] cipherText2 = cipher.doFinal(input2);
@@ -62,7 +66,7 @@ public class keyGeneration {
                 System.out.println("");
                 j=-1;
             }
-        }
+        } */
      
 
     }
@@ -104,6 +108,8 @@ public class keyGeneration {
             oin.close();
         }
     }
+
+    
     //read key parameters from a file and generate the private key
     public static PrivateKey readPrivKeyFromFile(String keyFileName)
             throws IOException {
@@ -138,6 +144,10 @@ public class keyGeneration {
         else{
             try{
                 Generate();
+                File file = new File("symmetric.key");
+                FileWriter fw = new FileWriter(file);
+                fw.write(key);
+                fw.close();
             }
             catch(Exception e){
                 System.out.println("Error Generating Keys:");

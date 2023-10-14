@@ -6,8 +6,7 @@ In the key generation program (required for EACH of Options 1, 2, and 3) in the 
 2. Create a pair of RSA public and private keys for ```Y, Ky+ and Ky–;```
 3. Get the modulus and exponent of each RSA public or private key and save them into files named ```“XPublic.key”, “XPrivate.key”,
 “YPublic.key”, and “YPrivate.key”```, respectively;
-4. Take a 16-character user input from the keyboard and save this 16-character string to a file named “symmetric.key”. This
-string’s 128-bit UTF-8 encoding will be used as the 128-bit AES symmetric key, Kxy, in your application.
+4. Take a 16-character user input from the keyboard and save this 16-character string to a file named “symmetric.key”. This string’s 128-bit UTF-8 encoding will be used as the 128-bit AES symmetric key, Kxy, in your application.
 
 ____
 

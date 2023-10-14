@@ -1,6 +1,10 @@
 package Sender;
 
+import KeyGen.keyGeneration;
 import java.util.Scanner;
+
+import javax.crypto.Cipher;
+
 import java.io.File;
 import java.io.BufferedInputStream;
 import java.io.FileInputStream;
@@ -9,34 +13,28 @@ import java.io.IOException;
 import java.security.MessageDigest;
 import java.security.PrivateKey;
 import java.security.PublicKey;
-import KeyGen.keyGeneration;
 
-public class sender {
+
+public class Sender {
     /*
      * 
      */
     public static void main(String[] args) {
 
         try{
-        PublicKey pubXkey = keyGeneration.readPubKeyFromFile("XPublic.key");
-        PublicKey pubYkey = keyGeneration.readPubKeyFromFile("YPublic.key");
-        PrivateKey privXkey = keyGeneration.readPrivKeyFromFile("XPrivate.key");
-        PrivateKey privYkey = keyGeneration.readPrivKeyFromFile("YPrivate.key");
-        encryptMessage(pubXkey, pubYkey, privXkey, privYkey);
+        PrivateKey privXkey = keyGeneration.readPrivKeyFromFile("KeyGen/XPrivate.key");
+        PublicKey symKey = keyGeneration.readPubKeyFromFile("KeyGen/symmetric.key");
+        encryptMessage( privXkey, symKey);
         }
         catch(Exception e){
             System.out.println("Error: " + e);
         }
-        
-        
-        
-        
-
-
     }
+        
 
-    private static void encryptMessage(PublicKey pubXkey, PublicKey pubYkey, PrivateKey privXkey, PrivateKey privYkey) {
+    
 
+    private static void encryptMessage(PrivateKey privXkey, PublicKey symKey) {
         Scanner sc = new Scanner(System.in);
         System.out.println("Enter the name of the file containing the message to be encrypted(file must be in the same directory, or use full path): ");
 
@@ -45,6 +43,8 @@ public class sender {
             message = new File(sc.nextLine());
         } catch (Exception e) {
             System.out.println("Error: " + e);
+            sc.close();
+            return;
         }
         
         int chunkSize = 2048;
@@ -62,6 +62,8 @@ public class sender {
 
         } catch (Exception e) {
             System.out.println("Error: " + e);
+            sc.close();
+            return;
         }
 
         // calculate the SHA256 hash of the entire message 
@@ -73,6 +75,8 @@ public class sender {
 
         catch(Exception e){
             System.out.println("Error: " + e);
+            sc.close();
+            return;
         }
         
         // display the hash in hexadecimal bytes
@@ -85,31 +89,92 @@ public class sender {
         String response = sc.nextLine();
         if (response.equals("y")||response.equals("Y")||response.equals("yes")||response.equals("Yes")) {
             hash[0] = (byte) ~hash[0]; // invert the first byte in SHA256(M)
-            System.out.println("SHA256(M) = " + byteToHex(hash));
+            System.out.println("SHA256(M), first byte inverted = " + byteToHex(hash));
         }
-        
+        sc.close();
 
         //save the hash to a file called "message.dd" and display SHA256(M) in hexadecimal bytes
         File hashFile = new File("message.dd");
         try (FileOutputStream fos = new FileOutputStream(hashFile)) {
             fos.write(hash);
-
             System.out.println("SHA256(M) written to message.dd");
             fos.close();
 
         } catch (Exception e) {
             System.out.println("Error: " + e);
+            sc.close();
+            return;
         }
-            
-       
-        // calculate the RSA encryption of the hash using the private key of the sender (Kx-)
+        
+        
+        // (RSA-En Kx– (SHA256 (M)) || M) 
+        // Calculate RSA encryption of the hash using the private key of the sender (Kx-), concatenate the resulting ciphertext with M, and save the resulting ciphertext to a file called "message.ds"
+        byte[] encryptedBytes = null;
+        try{
+        Cipher cipher = Cipher.getInstance("RSA/ECB/PKCS1Padding");
+        cipher.init(Cipher.ENCRYPT_MODE, privXkey);
+        encryptedBytes = cipher.doFinal(hash);
+        }
 
+        catch(Exception e){
+            System.out.println("Error: " + e);
+            sc.close();
+            return;
+        }
 
         // Save this cypertext to a file called "message.ds-msg" and display the ciphertext in hexadecimal bytes
-        // Append M piece by piece to the file "message.ds-msg" 
-        // Calculate the AES encryption of the message using the symmetric key Kxy, where each piece is a multiple of 16 bytes
+        File RSAEncryptedFile = new File("message.ds-msg");
 
-        // Save the resulting blocks to a file called "message.aecipher 
+        try (FileOutputStream fos = new FileOutputStream(RSAEncryptedFile)) {
+            fos.write(encryptedBytes);
+            System.out.println("Ciphertext written to message.ds-msg");
+            fos.close();
+        } catch (Exception e) {
+            System.out.println("Error: " + e);
+            sc.close();
+            return;
+        }
+
+        System.out.println("Ciphertext After RSA:" + byteToHex(encryptedBytes));
+
+        // Append M piece by piece to the file "message.ds-msg" 
+        try (FileOutputStream fos = new FileOutputStream(RSAEncryptedFile, true)) {
+            fos.write(messageBytes);
+            System.out.println("Message appended to message.ds-msg");
+            fos.close();
+        } catch (Exception e) {
+            System.out.println("Error: " + e);
+            sc.close();
+            return;
+        }
+        byte[] encryptedBytes2 = null;
+        File AESEncryptedFile = new File("message.aecipher");
+        // Calculate the AES encryption of the message using the symmetric key Kxy, where each piece is a multiple of 16 bytes
+        // Save the resulting ciphertext to a file called "message.aecipher" and display the ciphertext in hexadecimal bytes
+        try{
+            Cipher cipher = Cipher.getInstance("AES/CBC/PKCS5Padding"); // AES/CBC/PKCS5Padding is a standard for symmetric encryption
+            cipher.init(Cipher.ENCRYPT_MODE, symKey);
+            encryptedBytes2 = cipher.doFinal(encryptedBytes);
+            
+        }
+        catch(Exception e){
+            System.out.println("Error: " + e);
+            sc.close();
+            return;
+        }
+        
+        try(FileOutputStream fos = new FileOutputStream(AESEncryptedFile, true)){
+            fos.write(encryptedBytes2);
+            System.out.println("Ciphertext written to message.aecipher");
+            fos.close();
+            System.out.println("Ciphertext after AES: " + byteToHex(encryptedBytes2));
+        }
+
+        catch(Exception e){
+            System.out.println("Error: " + e);
+            sc.close();
+            return;
+        }
 
     }
 
