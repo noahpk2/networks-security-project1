@@ -11,6 +11,7 @@ import java.security.*;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.RSAPrivateKeySpec;
 import java.security.spec.RSAPublicKeySpec;
+import java.util.Arrays;
 import java.util.Scanner;
 
 
@@ -77,7 +78,7 @@ public class keyGeneration {
 
         ObjectOutputStream oout = new ObjectOutputStream(
                 new BufferedOutputStream(new FileOutputStream(fileName)));
-                
+
         try {
             oout.writeObject(mod);
             oout.writeObject(exp);
@@ -108,6 +109,7 @@ public class keyGeneration {
             return key;
         } catch (Exception e) {
             System.out.println("Error: " + e);
+            e.printStackTrace();
             throw new RuntimeException("Spurious serialisation error:", e);
             
         } finally {
@@ -126,13 +128,24 @@ public class keyGeneration {
         try {
             BigInteger m = (BigInteger) oin.readObject();
             BigInteger e = (BigInteger) oin.readObject();
+
             System.out.println("Read from " + keyFileName + ": modulus = " +
                     m.toString() + ", exponent = " + e.toString() + "\n");
+            
+
+            
             RSAPrivateKeySpec keySpec = new RSAPrivateKeySpec(m, e);
+            System.out.println("keySpec: " + keySpec.toString());
             KeyFactory factory = KeyFactory.getInstance("RSA");
+            System.out.println("factory: " + factory.toString());
+
             PrivateKey key = factory.generatePrivate(keySpec);
+            System.out.println("key: " + key.toString());
+
             return key;
+
         } catch (Exception e) {
+            e.printStackTrace();
             throw new RuntimeException("Spurious serialisation error", e);
         } finally {
             oin.close();
@@ -150,9 +163,22 @@ public class keyGeneration {
         else{
             try{
                 Generate();
-                ObjectOutputStream symKeyFile = new ObjectOutputStream (new BufferedOutputStream(new FileOutputStream("project01/KeyGen/symmetric.key")));
+                BufferedOutputStream symKeyFile = new BufferedOutputStream(new FileOutputStream("project01/KeyGen/symmetric.key"));
                 byte[] symKey = key.getBytes("UTF-8");
                 symKeyFile.write(symKey, 0, symKey.length);
+
+                // Truncate or pad the key if it is more than 16 bytes. Since UTF-8 is used, each character can be 1-4 bytes.
+                // AES only supports 16 byte keys, so we need to truncate or pad the key to 16 bytes.
+                if (symKey.length > 16) {
+                    symKey = Arrays.copyOf(symKey, 16); // Truncate to 16 bytes
+                } else if (symKey.length < 16) {
+                    byte[] temp = new byte[16];
+                    System.arraycopy(symKey, 0, temp, 0, symKey.length);
+                    symKey = temp; // Pad with zeros
+                }
+
+
+
                 symKeyFile.close();
             }
             catch(Exception e){

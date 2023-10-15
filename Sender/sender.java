@@ -4,12 +4,16 @@ import KeyGen.keyGeneration;
 import java.util.Scanner;
 
 import javax.crypto.Cipher;
+import javax.crypto.SecretKey;
+import javax.crypto.spec.SecretKeySpec;
 
 import java.io.File;
 import java.io.BufferedInputStream;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.security.MessageDigest;
 import java.security.PrivateKey;
 import java.security.PublicKey;
@@ -22,41 +26,54 @@ public class Sender {
     public static void main(String[] args) {
 
         try{
-        PrivateKey privXkey = keyGeneration.readPrivKeyFromFile("project01/KeyGen/XPrivate.key");
-        PublicKey symKey = keyGeneration.readPubKeyFromFile("project01/KeyGen/symmetric.key");
-        encryptMessage( privXkey, symKey);
+            
+
+            
+            PrivateKey privXkey = keyGeneration.readPrivKeyFromFile("project01/KeyGen/XPrivate.key");
+            System.out.println("privXkey:read");
+            SecretKey symKey = readSymmetricKeyFromFile("project01/KeyGen/symmetric.key");
+            encryptMessage( privXkey, symKey);
         }
         catch(Exception e){
             System.out.println("Error: " + e);
         }
     }
         
-
+    public static SecretKey readSymmetricKeyFromFile(String keyFileName) throws IOException {
+    byte[] keyBytes = Files.readAllBytes(Paths.get(keyFileName));
+    return new SecretKeySpec(keyBytes, "AES");
+    }
     
 
-    private static void encryptMessage(PrivateKey privXkey, PublicKey symKey) {
+    private static void encryptMessage(PrivateKey privXkey, SecretKey symKey) {
         Scanner sc = new Scanner(System.in);
+
+
         System.out.println("Enter the name of the file containing the message to be encrypted(file must be in the same directory, or use full path): ");
 
         File message = null;
-        try {
-            message = new File(sc.nextLine());
-        } catch (Exception e) {
-            System.out.println("Error: " + e);
-            sc.close();
-            return;
+        while (message == null)
+        {
+            try {
+                message = new File(sc.nextLine());
+            } catch (Exception e) {
+                System.out.println("Error: " + e);
+                sc.close();
+                return;
+            }
         }
         
 
         int chunkSize = 16*1024;  // 16KB
         byte[] messageBytes = new byte[chunkSize];
 
-        // read the message file piece by piece, in a small multiple of 1024 bytes. 2048? .. also different than class notes.
+        
         try(BufferedInputStream bis = new BufferedInputStream(new FileInputStream(message))) {
             int bytesRead = 0;
             while((bytesRead = bis.read(messageBytes,0,messageBytes.length)) != -1) {
                 System.out.println("Read " + bytesRead + " bytes");
             }
+            
             System.out.println("Total bytes read: " + bytesRead);
             System.out.println("Message read successfully");
 

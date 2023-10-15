@@ -1,6 +1,7 @@
 package Reciever;
 import java.io.File;
 import java.io.FileOutputStream;
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.security.MessageDigest;
@@ -9,14 +10,24 @@ import java.util.Arrays;
 import java.util.Scanner;
 
 import javax.crypto.Cipher;
+import javax.crypto.SecretKey;
+import javax.crypto.spec.SecretKeySpec;
+
 import KeyGen.keyGeneration;
 
 
 public class Receiver {
 
 public static void main(String[] args) {
+    Receiver receiver = new Receiver();
+    receiver.decryptMessage();
     
 }
+
+public static SecretKey readSymmetricKeyFromFile(String keyFileName) throws IOException {
+    byte[] keyBytes = Files.readAllBytes(Paths.get(keyFileName));
+    return new SecretKeySpec(keyBytes, "AES");
+    }
 
 
 public void decryptMessage() {
@@ -26,7 +37,7 @@ SHA256(M) with the locally calculated SHA256 hash of M, report hashing error if 
 */
 
 PublicKey pubXKey = null;
-PublicKey symKey = null;
+SecretKey symKey = null;
 File encryptedMessage = null;
 /* 
 1 To test this program, the corresponding key files need to be copied here from the directory “KeyGen”, and the file
@@ -35,12 +46,13 @@ File encryptedMessage = null;
 //2 Read the information on the keys to be used in this program from the key files and generate Kx+ and Kxy.
 
 try{
-pubXKey = keyGeneration.readPubKeyFromFile("KeyGen/XPublic.key");
-symKey = keyGeneration.readPubKeyFromFile("KeyGen/symmetric.key");
+pubXKey = keyGeneration.readPubKeyFromFile("project01/KeyGen/XPublic.key");
+symKey = readSymmetricKeyFromFile("project01/KeyGen/symmetric.key");
 encryptedMessage = new File("message.aescipher");
 }
 catch(Exception e){
     System.out.println("Error: " + e);
+    e.printStackTrace();
     return;
 }
 
@@ -81,6 +93,7 @@ try{
 }
 catch(Exception e){
     System.out.println("Error: " + e);
+    e.printStackTrace();
     return;
 }
 
