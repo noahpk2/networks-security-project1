@@ -22,8 +22,8 @@ public class Sender {
     public static void main(String[] args) {
 
         try{
-        PrivateKey privXkey = keyGeneration.readPrivKeyFromFile("KeyGen/XPrivate.key");
-        PublicKey symKey = keyGeneration.readPubKeyFromFile("KeyGen/symmetric.key");
+        PrivateKey privXkey = keyGeneration.readPrivKeyFromFile("project01/KeyGen/XPrivate.key");
+        PublicKey symKey = keyGeneration.readPubKeyFromFile("project01/KeyGen/symmetric.key");
         encryptMessage( privXkey, symKey);
         }
         catch(Exception e){
@@ -47,14 +47,14 @@ public class Sender {
             return;
         }
         
-        int chunkSize = 2048;
+
+        int chunkSize = 16*1024;  // 16KB
         byte[] messageBytes = new byte[chunkSize];
 
-
-        // read the message file piece by piece, in a small multiple of 1024 bytes. 2048?
+        // read the message file piece by piece, in a small multiple of 1024 bytes. 2048? .. also different than class notes.
         try(BufferedInputStream bis = new BufferedInputStream(new FileInputStream(message))) {
             int bytesRead = 0;
-            while((bytesRead = bis.read(messageBytes)) != -1) {
+            while((bytesRead = bis.read(messageBytes,0,messageBytes.length)) != -1) {
                 System.out.println("Read " + bytesRead + " bytes");
             }
             System.out.println("Total bytes read: " + bytesRead);
@@ -65,6 +65,8 @@ public class Sender {
             sc.close();
             return;
         }
+
+
 
         // calculate the SHA256 hash of the entire message 
         byte[] hash = null;

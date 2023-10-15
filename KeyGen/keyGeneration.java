@@ -24,7 +24,7 @@ public class keyGeneration {
         SecureRandom random = new SecureRandom();
         KeyPairGenerator generator = null;
         generator = KeyPairGenerator.getInstance("RSA");
-        generator.initialize(128, random);
+        generator.initialize(2048, random);
         KeyPair pair = generator.generateKeyPair();
         KeyPair pair2 = generator.generateKeyPair();
         Key KxPublic = pair.getPublic();
@@ -42,10 +42,10 @@ public class keyGeneration {
         RSAPrivateKeySpec KyPrivSpec = factory.getKeySpec(KyPrivate, RSAPrivateKeySpec.class);
 
         //save the parameters of the keys to the files
-        saveToFile("XPublic.key", KxPubSpec.getModulus(), KxPubSpec.getPublicExponent());
-        saveToFile("XPrivate.key", KxPrivSpec.getModulus(), KxPrivSpec.getPrivateExponent());
-        saveToFile("YPublic.key", KyPubSpec.getModulus(), KyPubSpec.getPublicExponent());
-        saveToFile("YPrivate.key", KyPrivSpec.getModulus(), KyPrivSpec.getPrivateExponent());
+        saveToFile("project01/KeyGen/XPublic.key", KxPubSpec.getModulus(), KxPubSpec.getPublicExponent());
+        saveToFile("project01/KeyGen/XPrivate.key", KxPrivSpec.getModulus(), KxPrivSpec.getPrivateExponent());
+        saveToFile("project01/KeyGen/YPublic.key", KyPubSpec.getModulus(), KyPubSpec.getPublicExponent());
+        saveToFile("project01/KeyGen/YPrivate.key", KyPrivSpec.getModulus(), KyPrivSpec.getPrivateExponent());
 
 
 
@@ -70,11 +70,14 @@ public class keyGeneration {
      
 
     }
+
     public static void saveToFile(String fileName, BigInteger mod, BigInteger exp) throws IOException {
         System.out.println("Write to " + fileName + ": modulus = " +
                 mod.toString() + ", exponent = " + exp.toString() + "\n");
+
         ObjectOutputStream oout = new ObjectOutputStream(
                 new BufferedOutputStream(new FileOutputStream(fileName)));
+                
         try {
             oout.writeObject(mod);
             oout.writeObject(exp);
@@ -98,12 +101,15 @@ public class keyGeneration {
             BigInteger e = (BigInteger) oin.readObject();
             System.out.println("Read from " + keyFileName + ": modulus = " +
                     m.toString() + ", exponent = " + e.toString() + "\n");
+
             RSAPublicKeySpec keySpec = new RSAPublicKeySpec(m, e);
             KeyFactory factory = KeyFactory.getInstance("RSA");
             PublicKey key = factory.generatePublic(keySpec);
             return key;
         } catch (Exception e) {
-            throw new RuntimeException("Spurious serialisation error", e);
+            System.out.println("Error: " + e);
+            throw new RuntimeException("Spurious serialisation error:", e);
+            
         } finally {
             oin.close();
         }
@@ -144,10 +150,9 @@ public class keyGeneration {
         else{
             try{
                 Generate();
-                BufferedOutputStream symKeyFile = new BufferedOutputStream(new FileOutputStream("symmetric.key"));
+                ObjectOutputStream symKeyFile = new ObjectOutputStream (new BufferedOutputStream(new FileOutputStream("project01/KeyGen/symmetric.key")));
                 byte[] symKey = key.getBytes("UTF-8");
                 symKeyFile.write(symKey, 0, symKey.length);
-
                 symKeyFile.close();
             }
             catch(Exception e){
