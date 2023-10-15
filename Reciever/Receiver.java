@@ -38,9 +38,9 @@ SHA256(M) with the locally calculated SHA256 hash of M, report hashing error if 
 //2 Read the information on the keys to be used in this program from the key files and generate Kx+ and Kxy.
 
         try{
-            pubXKey = readPubKeyFromFile("/home/clambe12/project01/KeyGen/XPublic.key");
-            symKey = readSymmetricKeyFromFile("/home/clambe12/project01/KeyGen/symmetric.key");
-            encryptedMessage = new File("/home/clambe12/project01/Sender/message.aescipher");
+            pubXKey = readPubKeyFromFile("/home/name/project01/KeyGen/XPublic.key");
+            symKey = readSymmetricKeyFromFile("/home/name/project01/KeyGen/symmetric.key");
+            encryptedMessage = new File("/home/name/project01/Sender/message.aescipher");
         }
         catch(Exception e){
             System.out.println("Error: " + e);
