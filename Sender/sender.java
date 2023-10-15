@@ -1,50 +1,40 @@
-package Sender;
-
-import KeyGen.keyGeneration;
+import java.io.*;
+import java.math.BigInteger;
+import java.security.KeyFactory;
+import java.security.spec.RSAPrivateKeySpec;
 import java.util.Scanner;
-
 import javax.crypto.Cipher;
 import javax.crypto.SecretKey;
 import javax.crypto.spec.SecretKeySpec;
-
-import java.io.File;
-import java.io.BufferedInputStream;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.security.MessageDigest;
 import java.security.PrivateKey;
-import java.security.PublicKey;
 
 
 public class Sender {
     /*
-     * 
+     *
      */
     public static void main(String[] args) {
 
         try{
             
-
-            
-            PrivateKey privXkey = keyGeneration.readPrivKeyFromFile("project01/KeyGen/XPrivate.key");
+            PrivateKey privXkey = readPrivKeyFromFile("/home/name/project01/KeyGen/XPrivate.key");
             System.out.println("privXkey:read");
-            SecretKey symKey = readSymmetricKeyFromFile("project01/KeyGen/symmetric.key");
+            SecretKey symKey = readSymmetricKeyFromFile("/home/name/project01/KeyGen/symmetric.key");
             encryptMessage( privXkey, symKey);
         }
         catch(Exception e){
             System.out.println("Error: " + e);
         }
     }
-        
+
     public static SecretKey readSymmetricKeyFromFile(String keyFileName) throws IOException {
-    byte[] keyBytes = Files.readAllBytes(Paths.get(keyFileName));
-    return new SecretKeySpec(keyBytes, "AES");
+        byte[] keyBytes = Files.readAllBytes(Paths.get(keyFileName));
+        return new SecretKeySpec(keyBytes, "AES");
     }
     
-
     private static void encryptMessage(PrivateKey privXkey, SecretKey symKey) {
         Scanner sc = new Scanner(System.in);
 
@@ -62,18 +52,18 @@ public class Sender {
                 return;
             }
         }
-        
+
 
         int chunkSize = 16*1024;  // 16KB
         byte[] messageBytes = new byte[chunkSize];
 
-        
+
         try(BufferedInputStream bis = new BufferedInputStream(new FileInputStream(message))) {
             int bytesRead = 0;
             while((bytesRead = bis.read(messageBytes,0,messageBytes.length)) != -1) {
                 System.out.println("Read " + bytesRead + " bytes");
             }
-            
+
             System.out.println("Total bytes read: " + bytesRead);
             System.out.println("Message read successfully");
 
@@ -85,7 +75,7 @@ public class Sender {
 
 
 
-        // calculate the SHA256 hash of the entire message 
+        // calculate the SHA256 hash of the entire message
         byte[] hash = null;
         try{
             MessageDigest mDigest = MessageDigest.getInstance("SHA-256");
@@ -97,7 +87,7 @@ public class Sender {
             sc.close();
             return;
         }
-        
+
         // display the hash in hexadecimal bytes
         System.out.println("SHA256(M) = " + byteToHex(hash));
 
@@ -124,15 +114,15 @@ public class Sender {
             sc.close();
             return;
         }
-        
-        
-        // (RSA-En Kx– (SHA256 (M)) || M) 
+
+
+        // (RSA-En Kx– (SHA256 (M)) || M)
         // Calculate RSA encryption of the hash using the private key of the sender (Kx-), concatenate the resulting ciphertext with M, and save the resulting ciphertext to a file called "message.ds"
         byte[] encryptedBytes = null;
         try{
-        Cipher cipher = Cipher.getInstance("RSA/ECB/PKCS1Padding");
-        cipher.init(Cipher.ENCRYPT_MODE, privXkey);
-        encryptedBytes = cipher.doFinal(hash);
+            Cipher cipher = Cipher.getInstance("RSA/ECB/PKCS1Padding");
+            cipher.init(Cipher.ENCRYPT_MODE, privXkey);
+            encryptedBytes = cipher.doFinal(hash);
         }
 
         catch(Exception e){
@@ -156,7 +146,7 @@ public class Sender {
 
         System.out.println("Ciphertext After RSA:" + byteToHex(encryptedBytes));
 
-        // Append M piece by piece to the file "message.ds-msg" 
+        // Append M piece by piece to the file "message.ds-msg"
         try (FileOutputStream fos = new FileOutputStream(RSAEncryptedFile, true)) {
             fos.write(messageBytes);
             System.out.println("Message appended to message.ds-msg");
@@ -167,24 +157,24 @@ public class Sender {
             return;
         }
         byte[] encryptedBytes2 = null;
-        File AESEncryptedFile = new File("message.aecipher");
+        File AESEncryptedFile = new File("message.aescipher");
         // Calculate the AES encryption of the message using the symmetric key Kxy, where each piece is a multiple of 16 bytes
         // Save the resulting ciphertext to a file called "message.aecipher" and display the ciphertext in hexadecimal bytes
         try{
             Cipher cipher = Cipher.getInstance("AES/CBC/PKCS5Padding"); // AES/CBC/PKCS5Padding is a standard for symmetric encryption
             cipher.init(Cipher.ENCRYPT_MODE, symKey);
             encryptedBytes2 = cipher.doFinal(encryptedBytes);
-            
+
         }
         catch(Exception e){
             System.out.println("Error: " + e);
             sc.close();
             return;
         }
-        
+
         try(FileOutputStream fos = new FileOutputStream(AESEncryptedFile, true)){
             fos.write(encryptedBytes2);
-            System.out.println("Ciphertext written to message.aecipher");
+            System.out.println("Ciphertext written to message.aescipher");
             fos.close();
             System.out.println("Ciphertext after AES: " + byteToHex(encryptedBytes2));
         }
@@ -196,18 +186,49 @@ public class Sender {
         }
 
     }
+    public static PrivateKey readPrivKeyFromFile(String keyFileName)
+            throws IOException {
+        InputStream in =
+                new FileInputStream(keyFileName);
+        ObjectInputStream oin =
+                new ObjectInputStream(new BufferedInputStream(in));
+        try {
+            BigInteger m = (BigInteger) oin.readObject();
+            BigInteger e = (BigInteger) oin.readObject();
 
-public static String byteToHex(byte[] hash){
-    StringBuilder hexString = new StringBuilder();
-    
-    for (byte b : hash){
-        String hex = Integer.toHexString(0xff & b);
-        if(hex.length() == 1) hexString.append('0');
-        hexString.append(hex);
+            System.out.println("Read from " + keyFileName + ": modulus = " +
+                    m.toString() + ", exponent = " + e.toString() + "\n");
+
+
+
+            RSAPrivateKeySpec keySpec = new RSAPrivateKeySpec(m, e);
+            System.out.println("keySpec: " + keySpec.toString());
+            KeyFactory factory = KeyFactory.getInstance("RSA");
+            System.out.println("factory: " + factory.toString());
+
+            PrivateKey key = factory.generatePrivate(keySpec);
+            System.out.println("key: " + key.toString());
+
+            return key;
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            throw new RuntimeException("Spurious serialisation error", e);
+        } finally {
+            oin.close();
+        }
     }
 
-    return hexString.toString();
-}
+    public static String byteToHex(byte[] hash){
+        StringBuilder hexString = new StringBuilder();
+
+        for (byte b : hash){
+            String hex = Integer.toHexString(0xff & b);
+            if(hex.length() == 1) hexString.append('0');
+            hexString.append(hex);
+        }
+
+        return hexString.toString();
+    }
 
 }
-
