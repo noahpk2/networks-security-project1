@@ -133,7 +133,7 @@ public class keyGeneration {
         }
     }
 
-    public static void main(String[] args){
+   public static void main(String[] args){
         Scanner sc = new Scanner(System.in);
         System.out.println(" Enter a 16 Character Symmetric Key: ");
         String key = sc.nextLine();
@@ -144,10 +144,11 @@ public class keyGeneration {
         else{
             try{
                 Generate();
-                File file = new File("symmetric.key");
-                FileWriter fw = new FileWriter(file);
-                fw.write(key);
-                fw.close();
+                BufferedOutputStream symKeyFile = new BufferedOutputStream(new FileOutputStream("symmetric.key"));
+                byte[] symKey = key.getBytes("UTF-8");
+                symKeyFile.write(symKey, 0, symKey.length);
+
+                symKeyFile.close();
             }
             catch(Exception e){
                 System.out.println("Error Generating Keys:");
@@ -155,7 +156,7 @@ public class keyGeneration {
             }
         }
         sc.close();
-        
+
     }
    
 }
