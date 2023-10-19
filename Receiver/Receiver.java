@@ -1,28 +1,33 @@
+package Receiver;
+
 import java.io.*;
 import java.math.BigInteger;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.security.KeyFactory;
 import java.security.MessageDigest;
+import java.security.PrivateKey;
 import java.security.PublicKey;
 import java.security.spec.RSAPublicKeySpec;
 import java.util.Arrays;
+import java.util.Base64;
 import java.util.Scanner;
 import javax.crypto.Cipher;
 import javax.crypto.SecretKey;
 import javax.crypto.spec.SecretKeySpec;
+
+import KeyGen.keyGeneration;
+import Sender.Sender;
 
 
 
 public class Receiver {
 
     public static void main(String[] args) {
-        Receiver receiver = new Receiver();
-        receiver.decryptMessage();
-
+        decryptMessage();
     }
     
-    public void decryptMessage() {
+    public static void decryptMessage() {
     /*
 in the receiver’s program in the directory “Receiver”, using AES and RSA Decryptions to get SHA256 (M) and M, compare
 SHA256(M) with the locally calculated SHA256 hash of M, report hashing error if any, and then save M to a file.
@@ -38,9 +43,9 @@ SHA256(M) with the locally calculated SHA256 hash of M, report hashing error if 
 //2 Read the information on the keys to be used in this program from the key files and generate Kx+ and Kxy.
 
         try{
-            pubXKey = readPubKeyFromFile("/home/name/project01/KeyGen/XPublic.key");
-            symKey = readSymmetricKeyFromFile("/home/name/project01/KeyGen/symmetric.key");
-            encryptedMessage = new File("/home/name/project01/Sender/message.aescipher");
+            pubXKey = readPubKeyFromFile("project01/KeyGen/XPublic.key");
+            symKey = readSymmetricKeyFromFile("project01/KeyGen/symmetric.key");
+            encryptedMessage = new File("message.aescipher");
         }
         catch(Exception e){
             System.out.println("Error: " + e);
@@ -53,7 +58,7 @@ SHA256(M) with the locally calculated SHA256 hash of M, report hashing error if 
 resulting message M will be saved to this file at the end of this program.
 */
         Scanner sc  = new Scanner(System.in);
-        System.out.println("Input the name of the message file: ");
+        System.out.println("Input the name of the (output) message file: ");
         String messageFileName = sc.nextLine();
 
 /*
@@ -62,26 +67,30 @@ bytes long. (Hint: if the length of the last block is less than that multiple of
 whose array size is the length of the last piece before being decrypted.) Calculate the AES Decryption of C using Kxy
 block by block to get RSA-En Kx - (SHA256 (M)) || M, and save the resulting pieces into a file named “message.ds-msg”.
 */
-        byte[] encryptedBytes = null;
+        //byte[] encryptedBytes = null;
 
-        int blockSize = 16;
+        int blockSize = 16*1024;
+        
 
+        try(BufferedInputStream bis = new BufferedInputStream(new FileInputStream(encryptedMessage));
+            BufferedOutputStream bos = new BufferedOutputStream(new FileOutputStream("message.ds-msg"))){
 
-
-        try{
-            Cipher cipher = Cipher.getInstance("AES/CBC/PKCS5Padding");
+            Cipher cipher = Cipher.getInstance("AES/ECB/PKCS5Padding");
             cipher.init(Cipher.DECRYPT_MODE, symKey);
-
-            // decrypt AES
-            encryptedBytes = Files.readAllBytes(encryptedMessage.toPath());
-            for (int i = 0; i < encryptedBytes.length; i += blockSize) {
-                int end = Math.min(i + blockSize, encryptedBytes.length);
-                byte[] block = Arrays.copyOfRange(encryptedBytes, i, end);
-                byte[] decryptedBytes = cipher.doFinal(block);
-                try (FileOutputStream fos = new FileOutputStream("message.ds-msg", true)) {
-                    fos.write(decryptedBytes);
-                }
+            byte[] encryptedBytes = new byte[blockSize];
+            int bytesRead = 0;
+            while ((bytesRead = bis.read(encryptedBytes, 0, encryptedBytes.length)) != -1) {
+                System.out.println("Read " + bytesRead + " bytes");
+                byte[] output = cipher.update(encryptedBytes, 0, bytesRead);
+                bos.write(output);
             }
+            
+            byte[] output = cipher.doFinal();
+            if (output != null) {
+                bos.write(output);
+            }
+
+
         }
         catch(Exception e){
             System.out.println("Error: " + e);
@@ -89,33 +98,68 @@ block by block to get RSA-En Kx - (SHA256 (M)) || M, and save the resulting piec
             return;
         }
 
+        //TEST CODE: KEY COMPARISON
+        // try{
+        // String test = "test";
+        // byte[] sampledata = test.getBytes(); 
+        // PrivateKey privXkey = Sender.readPrivKeyFromFile("project01/KeyGen/XPrivate.key");
+        // Cipher cipher = Cipher.getInstance("RSA/ECB/PKCS1Padding");
+        // cipher.init(Cipher.ENCRYPT_MODE, privXkey);
+        // byte[] encryptedData = cipher.doFinal(sampledata);
+
+        // cipher.init(Cipher.DECRYPT_MODE, pubXKey);
+        // byte[] decryptedData = cipher.doFinal(encryptedData);
+        // System.out.println("TEST: " + new String(decryptedData));
+        
 
 
-        try{
-    /*
+        // }
+        // catch(Exception e){
+        //     System.out.println("Error: " + e);
+        //     e.printStackTrace();
+        //     return;
+        // }
+
+
+  /*
 5 If using "RSA/ECB/PKCS1Padding", read the first 128 bytes from the file “message.ds-msg” to get the digital signature
 RSA-En Kx- (SHA256 (M)), and copy the message M, i.e., the leftover bytes in the file “message.ds-msg”, to a file whose
 name is specified in Step 3. (Why 128 bytes? Why is the leftover M?) Calculate the RSA Decryption of this digital
 signature using Kx+ to get the digital digest SHA256(M), SAVE this digital digest into a file named “message.dd”, and
 DISPLAY it in Hexadecimal bytes.
 */
-            byte[] fileContent = Files.readAllBytes(new File("message.ds-msg").toPath());
-            byte[] digitalSignature = Arrays.copyOfRange(fileContent, 0, 128);
-            byte[] messageBytes = Arrays.copyOfRange(fileContent, 128, fileContent.length);
+        try(BufferedInputStream bis = new BufferedInputStream(new FileInputStream("message.ds-msg"));
+            BufferedOutputStream bos = new BufferedOutputStream(new FileOutputStream(messageFileName));
+            BufferedOutputStream bosDigest = new BufferedOutputStream(new FileOutputStream("message.dd"))) {
+            
+            //Why 128? the RSA encryption of the SHA256 hash is 128 bytes long when using a 1024 bit key. 
+            //The leftover is M because we concatenated the hash and the message together in the sender program.
+            byte[] digitalSignature = new byte[128];
 
-            Files.write(Paths.get(messageFileName), messageBytes);
+            bis.read(digitalSignature);
 
             Cipher cipher = Cipher.getInstance("RSA/ECB/PKCS1Padding");
-            cipher.init(Cipher.DECRYPT_MODE,pubXKey);
+
+            cipher.init(Cipher.DECRYPT_MODE, pubXKey);
+
             byte[] decryptedBytes = cipher.doFinal(digitalSignature);
 
-            Files.write(Paths.get("message.dd"), decryptedBytes);
+            bosDigest.write(decryptedBytes);
+
             System.out.println("SHA256(M): " + byteToHex(decryptedBytes));
 
-        }
+            byte[] buffer = new byte[1024];
 
+            int bytesRead;
+
+            while ((bytesRead = bis.read(buffer)) != -1) {
+                bos.write(buffer, 0, bytesRead);
+            }
+
+        }
         catch(Exception e){
             System.out.println("Error: " + e);
+            e.printStackTrace();
             return;
         }
 
@@ -126,12 +170,18 @@ be a small multiple of 1024 bytes, calculate the SHA256 hash value (digital dige
 in Hexadecimal bytes, compare it with the digital digest obtained in Step 5, display whether the digital digest passes the
 authentication check.
  */
-        byte[] messageBytes = null;
+        
+        try (BufferedInputStream bis = new BufferedInputStream(new FileInputStream(messageFileName))) {
 
-        try{
-            messageBytes = Files.readAllBytes(new File(messageFileName).toPath());
             MessageDigest md = MessageDigest.getInstance("SHA-256");
-            byte[] messageHash = md.digest(messageBytes);
+
+            byte[] buffer = new byte[1024];
+            int bytesRead;
+            while ((bytesRead = bis.read(buffer)) != -1) {
+                md.update(buffer, 0, bytesRead);
+            }
+
+            byte[] messageHash = md.digest();
             String messageHashHex = byteToHex(messageHash);
             System.out.println("SHA256(M): " + messageHashHex);
 
@@ -143,13 +193,15 @@ authentication check.
             } else {
                 System.out.println("The digital digest does not pass the authentication check.");
             }
-        }
+            
+            } catch (Exception e) {
+                System.out.println("Error: " + e);
+                e.printStackTrace();
+                return;
+            }
 
-        catch(Exception e){
-            System.out.println("Error: " + e);
-        }
+}
 
-    }
 
     public static PublicKey readPubKeyFromFile(String keyFileName)
             throws IOException {
@@ -163,7 +215,6 @@ authentication check.
             BigInteger e = (BigInteger) oin.readObject();
             System.out.println("Read from " + keyFileName + ": modulus = " +
                     m.toString() + ", exponent = " + e.toString() + "\n");
-
             RSAPublicKeySpec keySpec = new RSAPublicKeySpec(m, e);
             KeyFactory factory = KeyFactory.getInstance("RSA");
             PublicKey key = factory.generatePublic(keySpec);
@@ -177,6 +228,8 @@ authentication check.
             oin.close();
         }
     }
+
+
     public static String byteToHex(byte[] hash){
         StringBuilder hexString = new StringBuilder();
 
@@ -188,10 +241,14 @@ authentication check.
 
         return hexString.toString();
     }
-    public static SecretKey readSymmetricKeyFromFile(String keyFileName) throws IOException {
-        byte[] keyBytes = Files.readAllBytes(Paths.get(keyFileName));
-        return new SecretKeySpec(keyBytes, "AES");
 
+
+    public static SecretKey readSymmetricKeyFromFile(String keyFileName) throws IOException {
+        BufferedInputStream keyFile = new BufferedInputStream(new FileInputStream(keyFileName));
+        byte[] keyBytes = new byte[keyFile.available()];
+        keyFile.read(keyBytes);
+        keyFile.close();
+        return new SecretKeySpec(keyBytes, "AES");
     }
 
 
