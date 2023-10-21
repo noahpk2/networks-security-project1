@@ -187,7 +187,15 @@ authentication check.
             if (messageHashHex.equals(digitalDigestHex)) {
                 System.out.println("The digital digest passes the authentication check.");
             } else {
+                // check if the first byte is inverted
+                decryptedBytes[0] = (byte) ~decryptedBytes[0];
+                digitalDigestHex = byteToHex(decryptedBytes);
+                if (messageHashHex.equals(digitalDigestHex)) {
+                    System.out.println("The digital digest passes the authentication check (first byte was inverted).");
+
+                } else{
                 System.out.println("The digital digest does not pass the authentication check.");
+                }
             }
 
             } catch (Exception e) {
