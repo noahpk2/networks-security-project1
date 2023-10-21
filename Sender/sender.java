@@ -80,6 +80,8 @@ public class Sender {
         try{
             MessageDigest mDigest = MessageDigest.getInstance("SHA-256");
             hash = mDigest.digest(messageBytes);
+            
+            
         }
         catch(Exception e){
             System.out.println("Error: " + e);

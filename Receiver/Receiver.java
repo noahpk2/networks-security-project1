@@ -1,23 +1,16 @@
 package Receiver;
-
 import java.io.*;
 import java.math.BigInteger;
 import java.nio.file.Files;
-import java.nio.file.Paths;
 import java.security.KeyFactory;
 import java.security.MessageDigest;
-import java.security.PrivateKey;
 import java.security.PublicKey;
 import java.security.spec.RSAPublicKeySpec;
-import java.util.Arrays;
-import java.util.Base64;
 import java.util.Scanner;
 import javax.crypto.Cipher;
 import javax.crypto.SecretKey;
 import javax.crypto.spec.SecretKeySpec;
 
-import KeyGen.keyGeneration;
-import Sender.Sender;
 
 
 
@@ -127,27 +120,22 @@ RSA-En Kx- (SHA256 (M)), and copy the message M, i.e., the leftover bytes in the
 name is specified in Step 3. (Why 128 bytes? Why is the leftover M?) Calculate the RSA Decryption of this digital
 signature using Kx+ to get the digital digest SHA256(M), SAVE this digital digest into a file named “message.dd”, and
 DISPLAY it in Hexadecimal bytes.
-*/
+*/      byte[] digitalSignature = new byte[128];
+        byte[] decryptedBytes = null;
+
         try(BufferedInputStream bis = new BufferedInputStream(new FileInputStream("message.ds-msg"));
             BufferedOutputStream bos = new BufferedOutputStream(new FileOutputStream(messageFileName));
             BufferedOutputStream bosDigest = new BufferedOutputStream(new FileOutputStream("message.dd"))) {
             
             //Why 128? the RSA encryption of the SHA256 hash is 128 bytes long when using a 1024 bit key. 
             //The leftover is M because we concatenated the hash and the message together in the sender program.
-            byte[] digitalSignature = new byte[128];
-
             bis.read(digitalSignature);
-
             Cipher cipher = Cipher.getInstance("RSA/ECB/PKCS1Padding");
-
             cipher.init(Cipher.DECRYPT_MODE, pubXKey);
-
-            byte[] decryptedBytes = cipher.doFinal(digitalSignature);
+            decryptedBytes = cipher.doFinal(digitalSignature);
 
             bosDigest.write(decryptedBytes);
-
-            System.out.println("SHA256(M): " + byteToHex(decryptedBytes));
-
+            System.out.println("SHA256(M) obtained from ciphertext: " + byteToHex(decryptedBytes));
             byte[] buffer = new byte[1024];
 
             int bytesRead;
@@ -175,25 +163,33 @@ authentication check.
 
             MessageDigest md = MessageDigest.getInstance("SHA-256");
 
-            byte[] buffer = new byte[1024];
-            int bytesRead;
+            byte[] buffer = new byte[1024*16];
+            int bytesRead=0;
             while ((bytesRead = bis.read(buffer)) != -1) {
-                md.update(buffer, 0, bytesRead);
+                
+        
             }
+            
 
-            byte[] messageHash = md.digest();
+            byte[] messageHash = md.digest(buffer);
             String messageHashHex = byteToHex(messageHash);
-            System.out.println("SHA256(M): " + messageHashHex);
 
-            byte[] digitalDigest = Files.readAllBytes(new File("message.dd").toPath());
-            String digitalDigestHex = byteToHex(digitalDigest);
+            System.out.println("SHA256(M) obtained from decrypted message: " + messageHashHex);
+
+
+            //compare the two hashes
+            
+            String digitalDigestHex = byteToHex(decryptedBytes);
+
+            System.out.println(decryptedBytes.length);
+            System.out.println(messageHash.length);
 
             if (messageHashHex.equals(digitalDigestHex)) {
                 System.out.println("The digital digest passes the authentication check.");
             } else {
                 System.out.println("The digital digest does not pass the authentication check.");
             }
-            
+
             } catch (Exception e) {
                 System.out.println("Error: " + e);
                 e.printStackTrace();
